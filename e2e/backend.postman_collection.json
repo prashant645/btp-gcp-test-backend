@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "backend e2e",
-    "description": "Run by scripts/runTest.sh after each dev and qa deploy. Variables: rootUrl, expectedVersion, checkGateway.",
+    "description": "Run by scripts/runTest.sh after each dev and qa deploy. Checks this backend's API, then the frontend that calls it: the frontend's /api/greeting must return this backend's version. If that fails, this backend rolls back. Variables: rootUrl, frontendUrl, expectedVersion, checkGateway.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -40,6 +40,120 @@
               "pm.test('content type is JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json/));",
               "pm.test('message is Hello World', () => pm.expect(pm.response.json().message).to.eql('Hello World'));",
               "pm.test('version matches the deployed commit', () => pm.expect(pm.response.json().version).to.eql(pm.variables.get('expectedVersion')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /greeting?lang=de returns the German message",
+      "request": {
+        "method": "GET",
+        "url": "{{rootUrl}}/greeting?lang=de"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('message is Hallo Welt', () => pm.expect(pm.response.json().message).to.eql('Hallo Welt'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /greeting?lang=xx is rejected",
+      "request": {
+        "method": "GET",
+        "url": "{{rootUrl}}/greeting?lang=xx"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /languages lists the languages",
+      "request": {
+        "method": "GET",
+        "url": "{{rootUrl}}/languages"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('includes English', () => pm.expect(pm.response.json().map(l => l.code)).to.include('en'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /openapi.json describes the API",
+      "request": {
+        "method": "GET",
+        "url": "{{rootUrl}}/openapi.json"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('is OpenAPI 3 for this version', () => { const s = pm.response.json(); pm.expect(s.openapi).to.match(/^3\\./); pm.expect(s.info.version).to.eql(pm.variables.get('expectedVersion')); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /docs serves Swagger UI",
+      "request": {
+        "method": "GET",
+        "url": "{{rootUrl}}/docs"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('page loads Swagger UI', () => pm.expect(pm.response.text()).to.include('swagger-ui-bundle.js'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Frontend GET /api/greeting returns this backend's response",
+      "request": {
+        "method": "GET",
+        "url": "{{frontendUrl}}/api/greeting"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200 (the frontend reached this backend)', () => pm.response.to.have.status(200));",
+              "pm.test('message is Hello World', () => pm.expect(pm.response.json().message).to.eql('Hello World'));",
+              "pm.test('frontend uses this backend version', () => pm.expect(pm.response.json().backendVersion).to.eql(pm.variables.get('expectedVersion')));"
             ]
           }
         }

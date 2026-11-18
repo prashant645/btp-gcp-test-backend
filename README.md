@@ -5,9 +5,13 @@ Backend for the btp-demo app on SAP BTP Kyma. The frontend lives in
 
 ## API
 
+Swagger UI is at `/docs`, and the OpenAPI spec at `/openapi.json`. `/` redirects to `/docs`.
+
 | Request | Response |
 |---|---|
-| `GET /greeting` | `{"message":"Hello World","version":"<commit>"}` |
+| `GET /greeting?lang=<code>` | `{"message":"Hello World","lang":"en","version":"<commit>"}`; `lang` is `en` (default), `de`, `fr`, `es` or `it`; anything else is `400` |
+| `GET /languages` | `[{"code":"en","name":"English"}, ...]` |
+| `GET /openapi.json`, `GET /docs` | OpenAPI 3 spec, Swagger UI |
 | `GET /version` | the deployed commit (`APP_VERSION`) |
 | `GET /healthz` | `OK` |
 | anything else | `404`; non-GET is `405`, and the APIRule allows GET only |
@@ -16,12 +20,22 @@ Backend for the btp-demo app on SAP BTP Kyma. The frontend lives in
 
 ```bash
 npm test
-APP_VERSION=local npm start &
-curl http://localhost:3000/greeting
+APP_VERSION=local PORT=3001 npm start &
+curl "http://localhost:3001/greeting?lang=de"
+open http://localhost:3001/docs
 
-# e2e against the local app
-bash scripts/runTest.sh -e dev -v local -u http://localhost:3000
+# e2e: needs the frontend running on 3000, pointing at this backend (see its README)
+bash scripts/runTest.sh -e dev -v local -u http://localhost:3001 -f http://localhost:3000
 ```
+
+## e2e and rollback
+
+The post-deploy e2e checks this API, then the frontend that calls it: the frontend's `/api/greeting`
+(at `consumer.frontendUrl` in `values-<env>.yaml`) must return this backend's version. So a backend
+change that breaks the frontend fails here, and **this backend rolls itself back**.
+
+If the frontend is down, `runTest.sh` exits 98 and the rollback is skipped, because the backend isn't at fault.
+The rollback is also skipped when the run redeploys the commit that's already live.
 
 ## Branching and deployment
 
@@ -37,7 +51,7 @@ Same branching strategy and pipeline as the frontend repo. See its
 
 Dev and QA: Build & Test, then Deploy (`helm upgrade --atomic`), then APIRule + smoke, then e2e (Newman,
 `e2e/backend.postman_collection.json`). If anything after Deploy fails, the release is rolled
-back to its previous revision and the run stays red.
+back to its previous revision (except in the two cases above) and the run stays red.
 
 | | Value |
 |---|---|

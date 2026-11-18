@@ -22,9 +22,11 @@ for i in $(seq 1 "$MAX_ATTEMPTS"); do
       echo "Unexpected /healthz body: '${body}' (expected 'OK')" >&2
       exit 1
     fi
+    # Checks the greeting only, not the field names, so it also passes against the
+    # previous version after a rollback. The e2e checks the response format.
     greeting="$(curl -s "https://${HOST}/greeting")"
-    if [[ "$greeting" != *'"message":"Hello World"'* ]]; then
-      echo "Unexpected /greeting body: '${greeting}' (expected message 'Hello World')" >&2
+    if [[ "$greeting" != *'Hello World'* ]]; then
+      echo "Unexpected /greeting body: '${greeting}' (expected 'Hello World')" >&2
       exit 1
     fi
     echo "Smoke test passed against https://${HOST}"

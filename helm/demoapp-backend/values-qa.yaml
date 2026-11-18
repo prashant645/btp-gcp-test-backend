@@ -5,3 +5,8 @@ image:
   repository: btp-gcp-test-backend-qa
 apirule:
   host: demoapp-backend-qa.a35836f.stage.kyma.ondemand.com
+
+# Used only by the e2e (scripts/runTest.sh), not by the chart: the frontend that calls
+# this backend. Its /api/greeting must return this backend's version.
+consumer:
+  frontendUrl: https://demoapp-qa.a35836f.stage.kyma.ondemand.com

@@ -13,3 +13,8 @@ resources:
   limits:
     cpu: 200m
     memory: 128Mi
+
+# Used only by the e2e (scripts/runTest.sh), not by the chart: the frontend that calls
+# this backend. Its /api/greeting must return this backend's version.
+consumer:
+  frontendUrl: https://demoapp.a35836f.stage.kyma.ondemand.com
